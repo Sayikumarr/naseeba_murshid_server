@@ -17,6 +17,41 @@ class ImageViewSet(viewsets.ReadOnlyModelViewSet):
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import ArtRequirement, Member, OrderStatus
+from django.conf import settings
+import asyncio
+from django.core.mail import EmailMessage 
+
+import base64
+
+def generate_token(tracking_id):
+    encoded_id = base64.b64encode(tracking_id.encode()).decode()
+    return encoded_id
+
+def decode_token(token):
+    try:
+        decoded_id = base64.b64decode(token.encode()).decode()
+        return decoded_id
+    except:
+        return None
+
+
+import threading
+from django.core.mail import EmailMessage  # Use EmailMessage for flexibility
+
+def send_email_async(subject, message, to_emails, from_email=settings.DEFAULT_FROM_EMAIL):
+    try:
+        def send_email_task():
+            print("started!")
+            email = EmailMessage(subject, message, from_email, to_emails)
+            email.send(fail_silently=False)
+            print("Mail sent!")
+
+        thread = threading.Thread(target=send_email_task)
+        thread.start()
+        print("trying to send mail!")
+    except Exception as e:
+        print("Failed to send email. Error:", e)
+    
 
 @csrf_exempt
 def submit_art_requirement(request):
@@ -37,21 +72,55 @@ def submit_art_requirement(request):
             background_image=background_image
         )
         # Process members data
+        members_data = []
         count = 0
         for key, value in request.POST.items():
             if key.startswith('members'):
                 member = Member.objects.create(
+                    requirement=art_requirement,
                     photo=request.FILES.get(f'members[{count}][photo]'),
                     dress=request.FILES.get(f'members[{count}][dress]'),
                     description = request.POST.get(key))
-                art_requirement.members.add(member)
+                members_data.append(member)
                 count+=1
         total = count*2000
-        oder_status=OrderStatus(requirement=art_requirement,total=total,paid=0)
-        oder_status.save()
+        order_status=OrderStatus(requirement=art_requirement,total=total,paid=0)
+        order_status.save()
+        try:
+            token = generate_token(order_status.tracking_number)
+            # Send email to Customer
+            send_email_async(
+                subject="Confirmation: Your Request has been Received",
+                message=f'''Dear {name},
 
-        # Return a JSON response indicating success
-        return JsonResponse({'message': 'Form submitted successfully!','tracking_id':oder_status.tracking_number})
+We have received your request and will process it shortly.
+
+Details:
+
+Order ID: {art_requirement.id}
+Tracking No. / Reference Number: {order_status.tracking_number}
+For Complete Details Click on this Link : {settings.SERVER_URL}/api/customer/?token={token}
+Thank you for choosing our service.
+
+Sincerely,
+Naseeba Murshid..''',to_emails=[email])
+        
+            # Send email to Admin
+            send_email_async(
+                subject=f"New Request Received #{order_status.tracking_number}",
+                message=f'''Dear Naseeba,
+
+A new request has been submitted online:
+
+Details:
+
+Order ID: {art_requirement.id}
+Tracking No. / Reference Number: {order_status.tracking_number}
+For Complete Details Click on this Link : {settings.SERVER_URL}/api/admin/{art_requirement.id}
+Please review and take necessary actions.''',to_emails=[settings.ADMIN_EMAIL])
+        except Exception as e:
+            print(e)
+        return JsonResponse({'message': 'Form submitted successfully!','tracking_id':order_status.tracking_number})
     else:
         # Return an error response if request method is not POST
         return JsonResponse({'error': 'Only POST requests are allowed!'}, status=405)
@@ -109,6 +178,41 @@ def paymentScreenShot(request):
         payscreenshot.payment_screenshot = screenshot
         payscreenshot.save()
 
+        art_requirement = order_status.requirement
+        try:
+            token = generate_token(order_status.tracking_number)
+            # Send email to customer
+            send_email_async(
+                subject="Thank you for your Payment ScreenShot Submission",
+                message=f'''Dear {art_requirement.name},
+
+We have received your request and will process it shortly.
+
+Details:
+
+Order ID: {art_requirement.id}
+Tracking No. / Reference Number: {order_status.tracking_number}
+For Complete Details Click on this Link : {settings.SERVER_URL}/api/customer/?token={token}
+Thank you for choosing our service.
+
+Sincerely,
+Naseeba Murshid..''',to_emails=[art_requirement.email])
+        
+            # Send email to Admin
+            send_email_async(
+                subject=f"New Payment ScreenShot Submission #{order_status.tracking_number}",
+                message=f'''Dear Naseeba,
+
+A new request has been submitted online:
+
+Details:
+
+Order ID: {art_requirement.id}
+Tracking No. / Reference Number: {order_status.tracking_number}
+For Complete Details Click on this Link : {settings.SERVER_URL}/api/admin/{art_requirement.id}
+Please review and take necessary actions.''',to_emails=[settings.ADMIN_EMAIL])
+        except Exception as e:
+            print(e)
         # Return a success response
         return JsonResponse({'success': True})
 
@@ -123,3 +227,45 @@ class ContactCreateView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def sendtoAdmin(request,id):
+    art = ArtRequirement.objects.get(id=id)
+    order_status = OrderStatus.objects.get(requirement = art)
+    members_data = Member.objects.filter(requirement=art)
+    screenshots = PaymentScreenshot.objects.filter(order_status=order_status)
+
+    return render(request,"admin_order_template.html", {'art_requirement': art, 'order_status': order_status, 'members_data': members_data,'screenshots':screenshots,'SERVER_URL':settings.SERVER_URL})
+
+@login_required
+def admin_board(request):
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        # Assuming you have a URL pattern named 'order_detail' for displaying order details
+        return redirect('order_detail', id=order_id)  # Redirect to order detail page
+    return render(request,'admin_board.html',{'SERVER_URL':settings.SERVER_URL})
+
+from django.contrib.auth import logout
+from django.shortcuts import redirect
+
+def logout_view(request):
+    logout(request)
+    return redirect('admin_board')
+
+
+def sendCustomer(request):
+    try:
+        token = request.GET.get('token')
+        tracking_id = decode_token(token)
+        order_status = OrderStatus.objects.get(tracking_number=tracking_id)
+        art = ArtRequirement.objects.get(id=order_status.requirement.id)
+        members_data = Member.objects.filter(requirement=art)
+        screenshots = PaymentScreenshot.objects.filter(order_status=order_status)
+    except:
+        return render(request,"no-data-found.html")
+
+    return render(request,"user_order_template.html", {'art_requirement': art, 'order_status': order_status, 'members_data': members_data,'screenshots':screenshots,'SERVER_URL':settings.SERVER_URL})

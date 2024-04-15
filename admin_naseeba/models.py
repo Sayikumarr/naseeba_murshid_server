@@ -8,13 +8,9 @@ class Image(models.Model):
     alt_text = models.CharField(max_length=255)
 
     def __str__(self):
-        return self.image.name
+        return self.alt_text
 
 
-class Member(models.Model):
-  photo = models.ImageField(upload_to='images/members/')  # Optional photo
-  dress = models.ImageField(upload_to='images/dresses/')  # Optional dress image
-  description = models.TextField(blank=True)  # Optional description
 
 class ArtRequirement(models.Model):
   name = models.CharField(max_length=255)
@@ -22,18 +18,18 @@ class ArtRequirement(models.Model):
   phone_number = models.CharField(max_length=20)
   background_image = models.ImageField(upload_to='images/backgrounds/')
   combined_description = models.TextField()
-  members = models.ManyToManyField(Member)
   created_at = models.DateTimeField(auto_now_add=True)
 
   def __str__(self):
-    return f"{self.name} - {self.email}"
+    return f"{self.id} - {self.name}"
 
-@receiver(pre_delete, sender=ArtRequirement)
-def delete_associated_members(sender, instance, **kwargs):
-    """
-    Signal handler to delete associated members when an ArtRequirement is deleted.
-    """
-    instance.members.clear()
+
+class Member(models.Model):
+  requirement = models.ForeignKey(ArtRequirement, on_delete=models.CASCADE)
+  photo = models.ImageField(upload_to='images/members/')  # Optional photo
+  dress = models.ImageField(upload_to='images/dresses/')  # Optional dress image
+  description = models.TextField(blank=True)  # Optional description
+
 
 import random
 import string
@@ -67,7 +63,7 @@ class OrderStatus(models.Model):
     remark = models.TextField(blank=True)
 
     def __str__(self):
-        return f"OrderStatus for {self.requirement.name}"
+        return f"OrderStatus for {self.requirement.id}"
     
     def save(self, *args, **kwargs):
         if not self.pk:  # Check if the object is being created

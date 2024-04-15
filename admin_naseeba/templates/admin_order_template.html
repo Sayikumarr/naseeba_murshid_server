@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NaseebaMurshid.in</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        /* Custom styles */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .jumbotron {
+            background-color: #007bff;
+            color: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .navbar {
+            background-color: #343a40;
+            padding: 10px 0;
+        }
+        .navbar-brand {
+            color: #fff;
+            font-size: 1.5rem;
+        }
+        .navbar-nav {
+            margin-left: auto;
+        }
+        .navbar-nav .nav-item {
+            margin-right: 10px;
+        }
+        .navbar-nav .nav-item a {
+            color: #fff;
+        }
+        .table {
+            background-color: #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Hi Naseeba!</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin:index' %}">Admin Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <br>
+    <div class="container">
+        <div class="jumbotron">
+            <h2 class="display-4">Art Requirement #{{ order_status.tracking_number }}</h2>
+            <p class="lead">Below is the details of the submission.</p>
+        </div>
+        
+        <table class="table">
+            <tr>
+                <th>Field</th>
+                <th>Value</th>
+            </tr>
+            <tr>
+                <td>Order ID</td>
+                <td>{{ art_requirement.id }}</td>
+            </tr>
+            <tr>
+                <td>Tracking No. / Reference Number</td>
+                <td>{{ order_status.tracking_number }}</td>
+            </tr>
+            <tr>
+                <td>Name</td>
+                <td>{{ art_requirement.name }}</td>
+            </tr>
+            <tr>
+                <td>Email</td>
+                <td>{{ art_requirement.email }}</td>
+            </tr>
+            <!-- Include other fields as needed -->
+            <tr>
+                <td>Total Payment</td>
+                <td>{{ order_status.total }}</td>
+            </tr>
+            <tr>
+                <td>Paid</td>
+                <td>{{ order_status.paid }}</td>
+            </tr>
+            <tr>
+                <td>Payment Status</td>
+                <td>{{ order_status.payment_status }}</td>
+            </tr>
+            <tr>
+                <td>Background Image</td>
+                <td><a href="{{SERVER_URL}}/media/{{ art_requirement.background_image }}" target="_blank"><img src="{{SERVER_URL}}/media/{{ art_requirement.background_image }}" alt="Background Photo" width="150"/></a></td>
+            </tr>
+            <tr>
+                <td>Combined Description</td>
+                <td><p>{{ art_requirement.combined_description }}</p></td>
+            </tr>
+            <!-- Include other fields as needed -->
+        </table>
+
+        <h3>Payment ScreenShots</h3>
+        <table class="table">
+            <tr>
+                <th>ScreenShot</th>
+                <th>Date-Time</th>
+            </tr>
+            {% for screenshot in screenshots %}
+            <tr>
+                <td><a href="{{SERVER_URL}}{{ screenshot.payment_screenshot.url }}" target="_blank"><img src="{{SERVER_URL}}{{ screenshot.payment_screenshot.url }}" alt="Payment Photo" width="100"></a></td>
+                <td>{{ screenshot.uploaded_at }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+
+        <h3>Members Information</h3>
+        <table class="table">
+            <tr>
+                <th>Photo</th>
+                <th>Dress</th>
+                <th>Description</th>
+            </tr>
+            {% for member_data in members_data %}
+            <tr>
+                <td><a href="{{SERVER_URL}}{{ member_data.photo.url }}" target="_blank"><img src="{{SERVER_URL}}{{ member_data.photo.url }}" alt="Member Photo" width="100"></a></td>
+                <td><a href="{{SERVER_URL}}{{ member_data.dress.url }}" target="_blank"><img src="{{SERVER_URL}}{{ member_data.dress.url }}" alt="Member Dress" width="100"></a></td>
+                <td>{{ member_data.description }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>
