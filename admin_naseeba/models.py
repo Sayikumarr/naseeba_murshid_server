@@ -102,3 +102,19 @@ class Contact(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+class BlogPost(models.Model):
+    art = models.ForeignKey(ArtRequirement, on_delete=models.PROTECT)
+    author = models.CharField(max_length=50)
+    content = models.TextField()
+    image = models.ImageField(upload_to='images/blog/blog_images/')
+    author_photo = models.ImageField(upload_to='images/blog/author_photos/', default='images/blog/default.jpg')
+    rating = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.art} by {self.author}"

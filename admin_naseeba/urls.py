@@ -2,13 +2,14 @@
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ImageViewSet,submit_art_requirement,OrderStatusByTrackingAPIView,paymentScreenShot,ContactCreateView,sendtoAdmin,logout_view,admin_board,sendCustomer
+from .views import ImageViewSet,submit_art_requirement,OrderStatusByTrackingAPIView,paymentScreenShot,ContactCreateView,sendtoAdmin,logout_view,admin_board,sendCustomer, BlogPostAPIView
 
 router = DefaultRouter()
 router.register(r'images', ImageViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('blogposts/', BlogPostAPIView.as_view(), name='blogpost-api'),
     # path('submit-form/', ArtRequirementsFormAPIView.as_view(), name='submit_form'),
     path('submit-form/', submit_art_requirement, name='submit_art_requirement'),
     path('confirmation/<str:tracking_number>/',OrderStatusByTrackingAPIView.as_view()),

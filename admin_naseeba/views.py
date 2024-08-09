@@ -1,6 +1,7 @@
 from rest_framework import viewsets
-from .models import Image
-from .serializers import ImageSerializer
+from rest_framework.views import APIView
+from .models import Image, BlogPost
+from .serializers import ImageSerializer, BlogPostSerializer
 
 class ImageViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Image.objects.all()
@@ -13,6 +14,11 @@ class ImageViewSet(viewsets.ReadOnlyModelViewSet):
         response_data['image_url'] = request.build_absolute_uri(instance.image.url)
         return Response(response_data)
 
+class BlogPostAPIView(APIView):
+    def get(self, request, format=None):
+        blog_posts = BlogPost.objects.all()
+        serializer = BlogPostSerializer(blog_posts, many=True, context={'request': request})
+        return Response(serializer.data)
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -234,13 +240,17 @@ from django.contrib.auth.decorators import login_required
 
 @login_required
 def sendtoAdmin(request,id):
-    art = ArtRequirement.objects.get(id=id)
-    order_status = OrderStatus.objects.get(requirement = art)
-    members_data = Member.objects.filter(requirement=art)
-    screenshots = PaymentScreenshot.objects.filter(order_status=order_status)
+    try:
+        art = ArtRequirement.objects.get(id=id)
+        order_status = OrderStatus.objects.get(requirement = art)
+        members_data = Member.objects.filter(requirement=art)
+        screenshots = PaymentScreenshot.objects.filter(order_status=order_status)
 
-    return render(request,"admin_order_template.html", {'art_requirement': art, 'order_status': order_status, 'members_data': members_data,'screenshots':screenshots,'SERVER_URL':settings.SERVER_URL})
-
+        return render(request,"admin_order_template.html", {'art_requirement': art, 'order_status': order_status, 'members_data': members_data,'screenshots':screenshots,'SERVER_URL':settings.SERVER_URL})
+    except:
+        return render(request,"no-data-found.html")
+    
+    
 @login_required
 def admin_board(request):
     if request.method == 'POST':
